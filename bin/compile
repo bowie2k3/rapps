@@ -51,11 +51,57 @@ fi
 
 # config
 
+# read in R version if file exists
+if [[ -f $BUILD_DIR/.r-version ]]; then
+  R_VERSION=`read_var $BUILD_DIR/.r-version`
+else
+  #R_VERSION="3.2.4"
+  R_VERSION="3.3.1"
+fi
+
+# read in buildback binary version if file exists
+if [[ -f $BUILD_DIR/.r-buildpack-version ]]; then
+  BUILD_PACK_VERSION=`read_var $BUILD_DIR/.r-buildpack-version`
+else
+  BUILD_PACK_VERSION="20160720-0331"
+  #BUILD_PACK_VERSION="20160719-1016"
+  #BUILD_PACK_VERSION="20160719-1042"
+  #BUILD_PACK_VERSION="20160719-1042"
+  #BUILD_PACK_VERSION="20160827-2217"
+  #BUILD_PACK_VERSION="20160708-2028"
+fi
+
+S3_BUCKET="heroku-buildpack-r"
+#R_BINARIES="http://${S3_BUCKET}.s3.amazonaws.com/${STACK}/R-${R_VERSION}-binaries-${BUILD_PACK_VERSION}.tar.gz"
+#R_BINARIES="$BUILD_DIR/R-${R_VERSION}-binaries-${BUILD_PACK_VERSION}.tar.gz"
+R_BINARIES="$BUILD_DIR/vendor.tar.gz"
+
+VENDOR_DIR="$BUILD_DIR/vendor"
+
 # define CRAN mirror if unset
 if [ -z "${CRAN_MIRROR}" ];
 then
   CRAN_MIRROR="http://cloud.r-project.org"
 fi
+
+mkdir -p $CACHE_DIR
+
+# vendor R into the slug
+echo "Vendoring R $R_VERSION for $STACK stack ($BUILD_PACK_VERSION)" | indent
+
+# download and unpack binaries
+echo "Downloading and unpacking R binaries ($R_BINARIES)" | indent
+# curl $R_BINARIES -s -o - | tar xzf - -C $BUILD_DIR
+tar zxf $R_BINARIES -C $BUILD_DIR
+
+# need to copy the binaries to /app/vendor so that R works when compiling packages
+
+mkdir -p /app/.apt
+cp -R $VENDOR_DIR/.apt/* /app/.apt
+
+mkdir -p /app/vendor/R
+cp -R $VENDOR_DIR/R/* /app/vendor/R
+
 
 # needed for compiling packages
 export PATH="/app/vendor/R/bin:/app/.apt/usr/bin:/app/bin:/usr/ruby1.9.2/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
