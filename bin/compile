@@ -122,3 +122,23 @@ cp "$BUILDPACK_DIR/bin/r_environment.sh" $BUILD_DIR/.profile.d/r_environment.sh
 mkdir -p /app/vendor/R/lib64/R/doc/html
 touch /app/vendor/R/lib64/R/doc/html/R.css
 
+# install dependencies from CRAN
+echo "Executing init.r script" | indent
+
+# set the CRAN mirror and run the init.r program
+/app/vendor/R/bin/R -s <<RPROG > indent
+  Sys.setenv(BUILD_DIR="$BUILD_DIR")
+  setwd("$BUILD_DIR")
+  r <- getOption("repos");
+  r["CRAN"] <- "$CRAN_MIRROR";
+  options(repos=r);
+  `cat $BUILD_DIR/init.r`
+RPROG
+
+echo "R $R_VERSION successfully installed" | indent
+
+# need to copy binaries back so that any
+# installed packages are included in the slug
+rm -rf $VENDOR_DIR/R
+mkdir -p $VENDOR_DIR/R
+cp -R /app/vendor/R/* $VENDOR_DIR/R
